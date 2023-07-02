@@ -5,6 +5,7 @@
 template<typename T, typename Hash=std::hash<T>>
 class unordered_set {
 	public:
+	using iterator = typename std::forward_list<std::pair<std::size_t, T>>::iterator; //typename is required since its a dependent name.
 	unordered_set()
 	{
 		cap = 1;
@@ -20,10 +21,8 @@ class unordered_set {
 		delete[] buffer;
 	}
 	void print() {
-		auto it = storage.begin();
-		while(it!=storage.end()) {
-			std::cout<<"("<<it->first<<","<<it->second<<") ";
-			it++;
+		for(typename unordered_set<T>::iterator it = begin(); it!=end(); it++) {
+			std::cout<<it->second<<" ";
 		}
 		std::cout<<std::endl;
 	}
