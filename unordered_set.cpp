@@ -1,11 +1,11 @@
 #include <iostream>
 #include <forward_list>
 #include <string>
-
+#include <vector>
 template<typename T, typename Hash=std::hash<T>>
 class unordered_set {
 	public:
-	using iterator = typename std::forward_list<std::pair<std::size_t, T>>::iterator; //typename is required since its a dependent name.
+	//using iterator = typename std::forward_list<std::pair<std::size_t, T>>::iterator; //typename is required since its a dependent name.
 	unordered_set()
 	{
 		cap = 1;
@@ -17,12 +17,67 @@ class unordered_set {
 		num_elements = 0;
 		last_element=storage.begin();
 	}
-	~unordered_set() {
+	unordered_set(const unordered_set<T>& other) {
+		//might not be the most efficient way should 'reserve' some space
+		//TODO implement 'reserve()' function.
+		for(auto it=other.begin();it!=other.end();it++)
+		{
+			insert(*it);
+		}
+	}
+	unordered_set(const std::vector<T>& init_list)
+	{
+		for (auto &x:init_list)
+		{
+			insert(x);
+		}
+	}
+	~unordered_set() 
+	{
 		delete[] buffer;
 	}
+	struct iterator
+	{
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = T;
+		using reference = value_type&;
+		iterator(const typename std::forward_list<std::pair<std::size_t,T>>::iterator& _list_iterator): list_iterator(_list_iterator) {}
+		reference operator*() const
+		{
+			return list_iterator->second;
+		}
+		iterator& operator++()//prefix increment
+		{
+			//exceptions?
+			list_iterator++;
+			return *this;
+		}
+		//postfix iterator
+		iterator operator++(int)
+		{
+			iterator tmp = *this;
+			list_iterator++;
+			return tmp;
+		}
+		friend bool operator==(const iterator& a, const iterator& b)
+		{
+			return a.getListIterator()==b.getListIterator();
+		}
+		friend bool operator!=(const iterator& a, const iterator& b)
+		{
+			return a.getListIterator()!=b.getListIterator();
+		}
+		const typename std::forward_list<std::pair<std::size_t,T>>::iterator& getListIterator() const
+		{
+			return list_iterator;
+		}
+	private:
+		typename std::forward_list<std::pair<std::size_t,T>>::iterator list_iterator;
+	};
 	void print() {
 		for(typename unordered_set<T>::iterator it = begin(); it!=end(); it++) {
-			std::cout<<it->second<<" ";
+			std::cout<<*it<<" ";
 		}
 		std::cout<<std::endl;
 	}
@@ -98,7 +153,15 @@ class unordered_set {
 	}
 
 	//  typenames that dependent on template parameter need the 'typename' keyword before them.
-	typename std::forward_list<std::pair<std::size_t, T>>::iterator find(const T& value) {
+	iterator begin()
+	{
+		return iterator(storage.begin());
+	}
+	iterator end()
+	{
+		return iterator(storage.end());
+	}
+	iterator find(const T& value) {
 		int h = hasher(value)%cap;
 		auto it = buffer[h];
 		if(buffer[h]==storage.end())
@@ -110,15 +173,7 @@ class unordered_set {
 			}
 			it++;
 		}
-		return storage.end();
-	}
-	typename std::forward_list<std::pair<std::size_t, T>>::iterator begin() {
-		auto it = storage.begin();
-		it++;
-		return it;
-	}
-	typename std::forward_list<std::pair<std::size_t, T>>::iterator end() {
-		return storage.end();
+		return iterator(storage.end());
 	}
 	private:
 	typename std::forward_list<std::pair<std::size_t, T>>::iterator* buffer; 	
