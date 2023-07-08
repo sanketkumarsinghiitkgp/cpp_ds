@@ -53,16 +53,14 @@ class unordered_set {
 		iterator& operator++()//prefix increment
 		{
 			//exceptions?
-			if(!list_iterator==storage.end())
-				list_iterator++;
+			list_iterator++;
 			return *this;
 		}
 		//postfix iterator
 		iterator operator++(int)
 		{
 			iterator tmp = *this;
-			if(!list_iterator==storage.end())
-				list_iterator++;
+			list_iterator++;
 			return tmp;
 		}
 		friend bool operator==(const iterator& a, const iterator& b)
@@ -80,6 +78,45 @@ class unordered_set {
 	private:
 		typename std::forward_list<std::pair<std::size_t,T>>::iterator list_iterator;
 	};
+	struct const_iterator
+	{
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = T;
+		using reference = const value_type&;
+		const_iterator(const typename std::forward_list<std::pair<std::size_t,T>>::const_iterator& _list_iterator): list_iterator(_list_iterator) {}
+		reference operator*() const
+		{
+			return list_iterator->second;
+		}
+		const_iterator& operator++()//prefix increment
+		{
+			//exceptions?
+			list_iterator++;
+			return *this;
+		}
+		//postfix iterator
+		const_iterator operator++(int)
+		{
+			const_iterator tmp = *this;
+			list_iterator++;
+			return tmp;
+		}
+		friend bool operator==(const const_iterator& a, const const_iterator& b)
+		{
+			return a.getListIterator()==b.getListIterator();
+		}
+		friend bool operator!=(const const_iterator& a, const const_iterator& b)
+		{
+			return a.getListIterator()!=b.getListIterator();
+		}
+		const typename std::forward_list<std::pair<std::size_t,T>>::const_iterator& getListIterator() const
+		{
+			return list_iterator;
+		}
+	private:
+		typename std::forward_list<std::pair<std::size_t,T>>::const_iterator list_iterator;
+	};
 	void print() {
 		for(auto &x:*this) {
 			std::cout<<x<<" ";
@@ -94,7 +131,7 @@ class unordered_set {
 			rehash();
 		}
 		int hv = hasher(value);
-		int h = std::abs(hv) % cap;
+		int h = std::abs((int)hv) % cap;
 		if (buffer[h]!=storage.end()) {
 			storage.insert_after(buffer[h], {hv, value});
 		}
@@ -118,7 +155,7 @@ class unordered_set {
 		//we need to make sure that "dummy" node value doesn't get copied in the rehashing process. Cost me hours :(.
 		for(;it!=storage.end();it++) {
 			auto element = *it;
-			int h = std::abs(element.first)%cap;
+			int h = std::abs((int)element.first)%cap;
 			if(new_buffer[h]!=new_storage.end())
 				new_storage.insert_after(new_buffer[h],{element.first, element.second});
 			else {
@@ -138,13 +175,13 @@ class unordered_set {
 	
 	bool erase(T value) {
 		//I should probably decrease the cap of the hash table if the num_elements < some threshold, look into this
-		int h = std::abs(hasher(value))%cap;		
+		int h = std::abs((int)hasher(value))%cap;		
 		auto it = buffer[h];
 		if (it == storage.end())
 			return false;
 		auto prev_it = it;
 		it++;
-		while(it!=storage.end() and std::abs(it->first)%cap==h) {
+		while(it!=storage.end() and std::abs((int)it->first)%cap==h) {
 			if(it->second == value) {
 				if (it == last_element) {
 					last_element = prev_it;
@@ -164,21 +201,41 @@ class unordered_set {
 	}
 
 	//  typenames that dependent on template parameter need the 'typename' keyword before them.
-	iterator begin()
+	iterator begin() 
 	{
-		return iterator(storage.begin());
+		auto it = storage.begin();
+		it++; //skipping the dummy node
+		return iterator(it);
 	}
-	iterator end()
+	iterator end() 
 	{
 		return iterator(storage.end());
 	}
+	const_iterator cbegin() const // made it const so that iterating over a const reference of unordered_set doesn't throw an error.
+	{
+		auto it=storage.cbegin();
+		it++;
+		return const_iterator(it);
+	}
+	const_iterator cend() const // made it const so that iterating over a const reference of unordered_set doesn't throw an error.
+	{
+		return const_iterator(storage.cend());
+	}
+	const_iterator begin() const // made it const so that iterating over a const reference of unordered_set doesn't throw an error.
+	{
+		return cbegin();
+	}
+	const_iterator end() const // made it const so that iterating over a const reference of unordered_set doesn't throw an error.
+	{
+		return cend();
+	}
 	iterator find(const T& value) {
-		int h = std::abs(hasher(value))%cap;
+		int h = std::abs((int)hasher(value))%cap;
 		auto it = buffer[h];
 		if(buffer[h]==storage.end())
 			return end();
 		it++;
-		while(it!=storage.end() and std::abs(it->first)%cap==h) {
+		while(it!=storage.end() and std::abs((int)it->first)%cap==h) {
 			if(it->second == value) {
 				return it;
 			}
